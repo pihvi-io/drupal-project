@@ -1,0 +1,81 @@
+version: '3'
+
+volumes:
+  minio:
+  mysql:
+
+services:
+  nginx:
+    image: pihvio/nginx
+    environment:
+      VIRTUAL_HOST: "site.test, *.site.test"
+      VIRTUAL_PORT: 80
+    volumes:
+      - .:/var/www/project/:ro,cached
+    ports:
+      - 80
+    env_file:
+      - config/development.env
+
+  php:
+    image: pihvio/php
+    volumes:
+      - .:/var/www/project/:rw,cached
+    expose:
+      - 9000
+    env_file:
+      - config/development.env
+
+  mysql:
+    image: mariadb
+    volumes:
+      - mysql:/var/lib/mysql
+    env_file:
+      - config/development.env
+
+  # 128Mb Memcached Container
+  memcached:
+    image: memcached:alpine
+    command: memcached -m 128m
+    env_file:
+      - config/development.env
+  
+  # AWS S3 clone for local development
+  minio:
+    image: minio/minio
+    volumes:
+      - minio:/export
+    command: server /export
+    ports:
+      - 9000
+    environment:
+      VIRTUAL_HOST: "minio.site.test, *.minio.site.test"
+      VIRTUAL_PORT: 9000
+    env_file:
+      - config/development.env
+  
+  # Headless Chrome with Selenium as a test runner
+  # This needs SYS_ADMIN caps for OSX
+  selenium:
+    image: yukinying/chrome-headless-browser-selenium
+    expose:
+      - "4444"
+    cap_add:
+      - SYS_ADMIN
+    shm_size: 1024m
+
+  mail:
+    image: mailhog/mailhog
+    ports:
+      - 8025
+    environment:
+      VIRTUAL_HOST: mail.site.test
+      VIRTUAL_PORT: 8025
+    expose:
+      - 1025
+
+# Add papertrail for logging
+
+# Use newrelic for php container
+
+# Varnish
